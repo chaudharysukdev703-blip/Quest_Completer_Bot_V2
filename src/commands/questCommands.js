@@ -17,10 +17,63 @@ import {
     MessageFlags,
     Colors,
 } from 'discord.js';
+import fs from 'fs';
+import path from 'path';
 import { QuestClient } from '../quest/questClient.js';
 import { TokenStore } from '../quest/tokenStore.js';
 import { enableAutoquest, disableAutoquest, isAutoquestEnabled } from '../quest/autoquestStore.js';
 import { PREFIX } from '../utils/config.js';
+
+// Access Control Function (Blocks DMs and checks for 'Quest Access' role or invites)
+function checkUserAccess(member, interactionOrMessage) {
+    // Agar yeh Direct Message (DM) hai aur server (guild) nahi hai, toh turant block kar do
+    if (interactionOrMessage && !interactionOrMessage.guild) return false;
+    
+    if (!member) return true;
+    
+    try {
+        if (member.permissions && typeof member.permissions.has === 'function') {
+            if (member.permissions.has('Administrator')) return true;
+        }
+    } catch (e) {}
+
+    const userId = member.id || member.author?.id;
+    if (!userId) return false;
+
+    const dbPath = path.resolve('./invitesData.json');
+    if (fs.existsSync(dbPath)) {
+        try {
+            const inviteData = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+            const userInvites = inviteData[userId]?.count || 0;
+            
+            if (member.guild && member.roles) {
+                const targetRole = member.guild.roles.cache.find(r => r.name === 'Quest Access');
+                if (userInvites >= 2) {
+                    if (targetRole && !member.roles.cache.has(targetRole.id)) {
+                        member.roles.add(targetRole).catch(() => {});
+                    }
+                    return true;
+                }
+                return member.roles.cache.some(role => role.name === 'Quest Access');
+            }
+            if (userInvites >= 2) return true;
+        } catch (err) {
+            console.error('Database check error:', err);
+        }
+    }
+
+    return member.roles?.cache?.some(role => role.name === 'Quest Access') || false;
+}
+
+function buildAccessDeniedCard() {
+    const c = new ContainerBuilder().setAccentColor(0xED4245);
+    c.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(
+            `# ❌ Access Denied\nYou cannot use quest commands in DMs, or you lack the required **Quest Access** role in the server.`,
+        ),
+    );
+    return { components: [c], flags: MessageFlags.IsComponentsV2 };
+}
 
 export function makeTokenStore(secret) {
     return new TokenStore(secret);
@@ -55,7 +108,6 @@ function buildLinkModal() {
     return modal;
 }
 
-// ── Yahan humne text aur buttons ko ek sath set kar diya hai ────────────────
 function buildLinkPrompt() {
     const c = new ContainerBuilder().setAccentColor(0xFEE75C);
     c.addTextDisplayComponents(
@@ -510,11 +562,19 @@ export const questCmd = {
     data: new SlashCommandBuilder().setName('quest').setDescription('Pick and complete one Discord quest'),
     prefix: 'quest',
     async execute(interaction, client) {
+        if (!checkUserAccess(interaction.member, interaction)) {
+            await interaction.reply({ components: [buildAccessDeniedCard().components[0]], flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2 });
+            return;
+        }
         const ts = client.tokenStore;
         await interaction.deferReply();
         await runQuestOne(interaction.user.id, ts, (opts) => interaction.followUp(opts));
     },
     async prefixExecute(message, _args, client) {
+        if (!checkUserAccess(message.member, message)) {
+            await message.reply(buildAccessDeniedCard());
+            return;
+        }
         await runQuestOne(message.author.id, client.tokenStore, (opts) => message.channel.send(opts));
     },
 };
@@ -523,11 +583,19 @@ export const questAllCmd = {
     data: new SlashCommandBuilder().setName('q').setDescription('Complete all quests at once'),
     prefix: 'q',
     async execute(interaction, client) {
+        if (!checkUserAccess(interaction.member, interaction)) {
+            await interaction.reply({ components: [buildAccessDeniedCard().components[0]], flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2 });
+            return;
+        }
         const ts = client.tokenStore;
         await interaction.deferReply();
         await runQuestAll(interaction.user.id, ts, (opts) => interaction.followUp(opts));
     },
     async prefixExecute(message, _args, client) {
+        if (!checkUserAccess(message.member, message)) {
+            await message.reply(buildAccessDeniedCard());
+            return;
+        }
         await runQuestAll(message.author.id, client.tokenStore, (opts) => message.channel.send(opts));
     },
 };
@@ -536,10 +604,18 @@ export const questListCmd = {
     data: new SlashCommandBuilder().setName('questlist').setDescription('List all Discord quests and their status'),
     prefix: 'questlist',
     async execute(interaction, client) {
+        if (!checkUserAccess(interaction.member, interaction)) {
+            await interaction.reply({ components: [buildAccessDeniedCard().components[0]], flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2 });
+            return;
+        }
         await interaction.deferReply();
         await runQuestList(interaction.user.id, client.tokenStore, (opts) => interaction.followUp(opts));
     },
     async prefixExecute(message, _args, client) {
+        if (!checkUserAccess(message.member, message)) {
+            await message.reply(buildAccessDeniedCard());
+            return;
+        }
         await runQuestList(message.author.id, client.tokenStore, (opts) => message.channel.send(opts));
     },
 };
@@ -548,10 +624,18 @@ export const tokenCheckCmd = {
     data: new SlashCommandBuilder().setName('tokencheck').setDescription('Check whether your saved Discord token is still valid'),
     prefix: 'tokencheck',
     async execute(interaction, client) {
+        if (!checkUserAccess(interaction.member, interaction)) {
+            await interaction.reply({ components: [buildAccessDeniedCard().components[0]], flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2 });
+            return;
+        }
         await interaction.deferReply({ flags: 64 });
         await runTokenCheck(interaction.user.id, client.tokenStore, (opts) => interaction.editReply(opts));
     },
     async prefixExecute(message, _args, client) {
+        if (!checkUserAccess(message.member, message)) {
+            await message.reply(buildAccessDeniedCard());
+            return;
+        }
         await runTokenCheck(message.author.id, client.tokenStore, (opts) => message.reply(opts));
     },
 };
@@ -560,10 +644,18 @@ export const autoquestCmd = {
     data: new SlashCommandBuilder().setName('autoquest').setDescription('Auto-complete every new quest the moment it drops'),
     prefix: 'autoquest',
     async execute(interaction, client) {
+        if (!checkUserAccess(interaction.member, interaction)) {
+            await interaction.reply({ components: [buildAccessDeniedCard().components[0]], flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2 });
+            return;
+        }
         await interaction.deferReply({ flags: 64 });
         await runAutoquestToggle(interaction.user.id, client.tokenStore, (opts) => interaction.editReply(opts));
     },
     async prefixExecute(message, _args, client) {
+        if (!checkUserAccess(message.member, message)) {
+            await message.reply(buildAccessDeniedCard());
+            return;
+        }
         await runAutoquestToggle(message.author.id, client.tokenStore, (opts) => message.reply(opts));
     },
 };
@@ -573,10 +665,18 @@ export const linkCmd = {
     prefix: 'link',
 
     async execute(interaction, client) {
+        if (!checkUserAccess(interaction.member, interaction)) {
+            await interaction.reply({ components: [buildAccessDeniedCard().components[0]], flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2 });
+            return;
+        }
         await interaction.showModal(buildLinkModal());
     },
 
     async prefixExecute(message, args, client) {
+        if (!checkUserAccess(message.member, message)) {
+            await message.reply(buildAccessDeniedCard());
+            return;
+        }
         const ts = client.tokenStore;
         const inlineToken = args.join('').trim();
 
@@ -638,6 +738,10 @@ export const unlinkCmd = {
     prefix: 'unlink',
 
     async execute(interaction, client) {
+        if (!checkUserAccess(interaction.member, interaction)) {
+            await interaction.reply({ components: [buildAccessDeniedCard().components[0]], flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2 });
+            return;
+        }
         const ts = client.tokenStore;
         const removed = ts.remove(interaction.user.id);
         disableAutoquest(interaction.user.id);
@@ -653,6 +757,10 @@ export const unlinkCmd = {
     },
 
     async prefixExecute(message, _args, client) {
+        if (!checkUserAccess(message.member, message)) {
+            await message.reply(buildAccessDeniedCard());
+            return;
+        }
         const ts = client.tokenStore;
         const removed = ts.remove(message.author.id);
         disableAutoquest(message.author.id);
@@ -766,3 +874,4 @@ export async function runAutoquestForUser(userId, quest, tokenStore, discordClie
         }
     }
 }
+
