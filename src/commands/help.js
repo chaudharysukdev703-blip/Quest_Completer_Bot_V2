@@ -6,9 +6,11 @@ import {
     SeparatorSpacingSize,
     SectionBuilder,
     ThumbnailBuilder,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
     MessageFlags,
 } from 'discord.js';
-import { getEmoji } from '../handlers/emoji.js';
 import { PREFIX } from '../utils/config.js';
 
 export default {
@@ -29,14 +31,14 @@ export default {
 function buildHelp(user, client) {
     const avatar = user.displayAvatarURL({ size: 128, extension: 'png' });
     const botAvatar = client.user.displayAvatarURL({ size: 128, extension: 'png' });
-    const c = new ContainerBuilder().setAccentColor(0x5865F2);
+    const c = new ContainerBuilder().setAccentColor(0xFF3366);
 
-    // ── Header ──────────────────────────────────────────────────────────────
+    // ── Header Matrix ───────────────────────────────────────────────────────
     c.addSectionComponents(
         new SectionBuilder()
             .addTextDisplayComponents(
                 new TextDisplayBuilder().setContent(
-                    `# 🤖 Quest Bot\n-# Hey **${user.username}**, here's everything I can do`,
+                    `# ⚡ INŠANE DYNASTY • COMMAND MATRIX\n-# Operator: **${user.username}** | System Status: **ONLINE**`,
                 ),
             )
             .setThumbnailAccessory(new ThumbnailBuilder().setURL(botAvatar)),
@@ -44,52 +46,64 @@ function buildHelp(user, client) {
 
     c.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(true));
 
-    // ── Token Section ────────────────────────────────────────────────────────
+    // ── Token Core ──────────────────────────────────────────────────────────
     c.addTextDisplayComponents(
         new TextDisplayBuilder().setContent(
-            `🔗 **Token**\n` +
-            `\`/link\`  \`${PREFIX}link\` — Link your Discord user token\n` +
-            `\`/unlink\`  \`${PREFIX}unlink\` — Remove your saved token\n` +
-            `\`/tokencheck\`  \`${PREFIX}tokencheck\` — Check if your token is still valid`,
+            `🔐 **[ TOKEN CORE ]**\n` +
+            `▫️ \`/link\` (\`${PREFIX}link\`) ➔ Link session token\n` +
+            `▫️ \`/unlink\` (\`${PREFIX}unlink\`) ➔ Purge token data\n` +
+            `▫️ \`/tokencheck\` (\`${PREFIX}tokencheck\`) ➔ Validate token health`,
         ),
     );
 
     c.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(true));
 
-    // ── Quest Section ────────────────────────────────────────────────────────
+    // ── Quest Engine ────────────────────────────────────────────────────────
     c.addTextDisplayComponents(
         new TextDisplayBuilder().setContent(
-            `🎮 **Quests**\n` +
-            `\`/quest\`  \`${PREFIX}quest\` — Pick and complete one quest\n` +
-            `\`/questall\`  \`${PREFIX}questall\` — Complete all quests at once\n` +
-            `\`/questlist\`  \`${PREFIX}questlist\` — View all your quests & status\n` +
-            `\`/autoquest\`  \`${PREFIX}autoquest\` — Auto-complete new quests as they drop`,
+            `🎮 **[ QUEST ENGINE ]**\n` +
+            `▫️ \`/quest\` (\`${PREFIX}quest\`) ➔ Execute single quest protocol\n` +
+            `▫️ \`/q\` (\`${PREFIX}q\`) ➔ Auto-run all active quests\n` +
+            `▫️ \`/questlist\` (\`${PREFIX}questlist\`) ➔ Scan quest database\n` +
+            `▫️ \`/autoquest\` (\`${PREFIX}autoquest\`) ➔ Autonomous background runner`,
         ),
     );
 
     c.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(true));
 
-    // ── Utility Section ──────────────────────────────────────────────────────
+    // ── System Terminal ─────────────────────────────────────────────────────
     c.addTextDisplayComponents(
         new TextDisplayBuilder().setContent(
-            `🛠️ **Utility**\n` +
-            `\`/ping\`  \`${PREFIX}ping\` — Check bot latency\n` +
-            `\`/help\`  \`${PREFIX}help\` — You're already here`,
+            `🛠️ **[ SYSTEM TERMINAL ]**\n` +
+            `▫️ \`/ping\` (\`${PREFIX}ping\`) ➔ Measure node latency\n` +
+            `▫️ \`/help\` (\`${PREFIX}help\`) ➔ Access command matrix`,
         ),
     );
 
     c.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(true));
 
-    // ── Footer ───────────────────────────────────────────────────────────────
+    // ── Footer Stats ────────────────────────────────────────────────────────
     c.addSectionComponents(
         new SectionBuilder()
             .addTextDisplayComponents(
                 new TextDisplayBuilder().setContent(
-                    `-# 🌐 Serving **${client.guilds.cache.size}** server(s)  ·  Prefix: \`${PREFIX}\``,
+                    `-# 🌐 Active Nodes: **${client.guilds.cache.size}** servers  •  Active Prefix: \`${PREFIX}\``,
                 ),
             )
             .setThumbnailAccessory(new ThumbnailBuilder().setURL(avatar)),
     );
 
-    return { components: [c], flags: MessageFlags.IsComponentsV2 };
+    // ── Action Row (Support / Server Button) ────────────────────────────────
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setLabel('Join InŠane DyNaStY')
+            .setStyle(ButtonStyle.Link)
+            .setURL('https://discord.gg/4ZFTsKCkYP')
+            .setEmoji('🌐'),
+    );
+
+    return { 
+        components: [c, row], 
+        flags: MessageFlags.IsComponentsV2 
+    };
 }
