@@ -201,7 +201,7 @@ function buildHelp(user, client) {
         new ButtonBuilder()
             .setLabel('Join Support Server')
             .setStyle(ButtonStyle.Link)
-            .setURL('https://discord.gg/YQ6MhFrCmu')
+            .setURL('https://discord.gg/6Dag66TfKE')
             .setEmoji('🌐')
     );
 
