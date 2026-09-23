@@ -26,9 +26,7 @@ import { PREFIX } from '../utils/config.js';
 
 // Access Control Function (Blocks DMs and checks for 'Quest Access' role or invites)
 function checkUserAccess(member, interactionOrMessage) {
-    // Agar yeh Direct Message (DM) hai aur server (guild) nahi hai, toh turant block kar do
     if (interactionOrMessage && !interactionOrMessage.guild) return false;
-    
     if (!member) return true;
     
     try {
@@ -132,7 +130,7 @@ function buildLinkPrompt() {
         new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId('link_prompt')
-                .setLabel('🔗 update Token')
+                .setLabel('🔗 Update Token')
                 .setStyle(ButtonStyle.Primary),
         ),
     );
@@ -239,7 +237,7 @@ function buildQuestInfoCard(quest, phase, claimed = 0, failReason = '') {
             const s = task.target;
             dur = s >= 60 ? `  •  **${Math.ceil(s / 60)} min**` : `  •  **${s}s**`;
         }
-        return `${meta.icon} ${meta.label}${dur}${phase === 'done' ? '  ✅' : ''}`;
+        return `${meta.icon}${meta.label}${dur}${phase === 'done' ? '  ✅' : ''}`;
     });
 
     const rewardLines = cfg.rewards_config.rewards.map((r) => {
@@ -874,4 +872,3 @@ export async function runAutoquestForUser(userId, quest, tokenStore, discordClie
         }
     }
 }
-
